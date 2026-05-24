@@ -132,6 +132,22 @@ static inline void *get_side_data(const struct mp_image *mpi,
     return NULL;
 }
 
+static void strip_dovi(struct mp_image *img)
+{
+    mp_image_params_restore_dovi_mapping(&img->params);
+    img->params.repr.dovi = NULL;
+    img->dovi_requires_el = false;
+    av_buffer_unref(&img->dovi);
+
+    // Map again to strip any DV metadata set to common fields.
+    img->params.color.hdr = (struct pl_hdr_metadata){0};
+    pl_map_hdr_metadata(&img->params.color.hdr, &(struct pl_av_hdr_metadata) {
+        .mdm = get_side_data(img, AV_FRAME_DATA_MASTERING_DISPLAY_METADATA),
+        .clm = get_side_data(img, AV_FRAME_DATA_CONTENT_LIGHT_LEVEL),
+        .dhp = get_side_data(img, AV_FRAME_DATA_DYNAMIC_HDR_PLUS),
+    });
+}
+
 static void vf_format_process(struct mp_filter *f)
 {
     struct priv *priv = f->priv;
@@ -178,18 +194,14 @@ static void vf_format_process(struct mp_filter *f)
         }
 
         if (!priv->opts->dovi) {
-            mp_image_params_restore_dovi_mapping(&img->params);
-            // Map again to strip any DV metadata set to common fields.
-            img->params.color.hdr = (struct pl_hdr_metadata){0};
-            pl_map_hdr_metadata(&img->params.color.hdr, &(struct pl_av_hdr_metadata) {
-                .mdm = get_side_data(img, AV_FRAME_DATA_MASTERING_DISPLAY_METADATA),
-                .clm = get_side_data(img, AV_FRAME_DATA_CONTENT_LIGHT_LEVEL),
-                .dhp = get_side_data(img, AV_FRAME_DATA_DYNAMIC_HDR_PLUS),
-            });
+            strip_dovi(img);
         }
 
-        if (!priv->opts->enhancement_layer)
+        if (!priv->opts->enhancement_layer) {
             mp_image_unrefp(&img->enhancement_layer);
+            if (img->dovi_requires_el)
+                strip_dovi(img);
+        }
 
         if (!priv->opts->hdr10plus) {
             memset(img->params.color.hdr.scene_max, 0,

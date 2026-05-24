@@ -408,6 +408,7 @@ struct mp_image *mp_image_new_dummy_ref(struct mp_image *img)
     new->icc_profile = NULL;
     new->a53_cc = NULL;
     new->dovi = NULL;
+    new->dovi_requires_el = false;
     new->film_grain = NULL;
     new->num_ff_side_data = 0;
     new->ff_side_data = NULL;
@@ -578,6 +579,7 @@ void mp_image_copy_attributes(struct mp_image *dst, struct mp_image *src)
     }
     assign_bufref(&dst->icc_profile, src->icc_profile);
     assign_bufref(&dst->dovi, src->dovi);
+    dst->dovi_requires_el = src->dovi_requires_el;
     assign_bufref(&dst->film_grain, src->film_grain);
     assign_bufref(&dst->a53_cc, src->a53_cc);
 
@@ -1181,14 +1183,24 @@ struct mp_image *mp_image_from_av_frame(struct AVFrame *src)
     if (sd) {
 #ifdef PL_HAVE_LAV_DOLBY_VISION
         const AVDOVIMetadata *metadata = (const AVDOVIMetadata *)sd->buf->data;
-#if PL_API_VER >= 364
-        if (pl_avdovi_metadata_supported(metadata)) {
+#if PL_API_VER >= 366
+        // Keep FEL metadata alive until the decoded EL frame is paired later.
+        // The renderer decides whether residual reconstruction can run based on
+        // the per-frame enhancement_layer pointer.
+        bool dovi_supported = pl_avdovi_metadata_supported(metadata);
+        bool map_dovi = true;
+#elif PL_API_VER >= 364
+        bool dovi_supported = pl_avdovi_metadata_supported(metadata);
+        bool map_dovi = dovi_supported;
 #else
         const AVDOVIRpuDataHeader *header = av_dovi_get_header(metadata);
-        if (header->disable_residual_flag) {
+        bool dovi_supported = header->disable_residual_flag;
+        bool map_dovi = dovi_supported;
 #endif
+        if (map_dovi) {
             dst->dovi = dovi = av_buffer_alloc(sizeof(struct pl_dovi_metadata));
             MP_HANDLE_OOM(dovi);
+            dst->dovi_requires_el = !dovi_supported;
             pl_map_avdovi_metadata(&dst->params.color, &dst->params.repr,
                                    (void *)dst->dovi->data, metadata);
         }

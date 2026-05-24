@@ -108,6 +108,7 @@ static void inherit_dovi_from_el(struct mp_image *bl, struct mp_image *el)
     bl->dovi = av_buffer_ref(el->dovi);
     if (!bl->dovi)
         return;
+    bl->dovi_requires_el = el->dovi_requires_el;
     bl->params.repr.dovi = (void *)bl->dovi->data;
     bl->params.repr.sys = el->params.repr.sys;
     bl->params.color.primaries = el->params.color.primaries;

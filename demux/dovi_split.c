@@ -86,12 +86,20 @@ struct mp_dovi_split *mp_dovi_split_create(struct demuxer *demuxer,
     if (av_bsf_init(s->bsf) < 0)
         goto fail;
 
-    // Allocate the virtual EL sh_stream.
-    // TODO: extradata for EL, this depends on work in lavc to allow passing
-    // EL decoder config in side-data.
-    // <https://code.ffmpeg.org/FFmpeg/FFmpeg/pulls/22889>
+    // Allocate the virtual EL sh_stream. The dovi_split BSF converts the EL
+    // packet format to match par_out, so the decoder needs these params.
     struct sh_stream *el = demux_alloc_sh_stream(STREAM_VIDEO);
-    el->codec->codec = "hevc";
+    el->codec->lav_codecpar = avcodec_parameters_alloc();
+    if (!el->codec->lav_codecpar ||
+        avcodec_parameters_copy(el->codec->lav_codecpar, s->bsf->par_out) < 0)
+    {
+        avcodec_parameters_free(&el->codec->lav_codecpar);
+        talloc_free(el);
+        goto fail;
+    }
+    mp_codec_info_from_avcodecpar(el->codec->lav_codecpar, el->codec);
+    el->codec->disp_w = el->codec->lav_codecpar->width;
+    el->codec->disp_h = el->codec->lav_codecpar->height;
     el->codec->native_tb_num = bl->codec->native_tb_num;
     el->codec->native_tb_den = bl->codec->native_tb_den;
     el->codec->fps = bl->codec->fps;

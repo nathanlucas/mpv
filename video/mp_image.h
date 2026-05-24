@@ -121,6 +121,8 @@ typedef struct mp_image {
     struct AVBufferRef *a53_cc;
     // Dolby Vision metadata, if any
     struct AVBufferRef *dovi;
+    // Dolby Vision metadata that requires a non-trivial enhancement layer
+    bool dovi_requires_el;
     // Film grain data, if any
     struct AVBufferRef *film_grain;
     // Other side data we don't care about.

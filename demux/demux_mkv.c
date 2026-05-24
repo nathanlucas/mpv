@@ -841,7 +841,7 @@ static void parse_block_addition_mapping(struct demuxer *demuxer,
         break;
         case MKBETAG('a','v','c','E'):
         case MKBETAG('h','v','c','E'):
-            MP_WARN(demuxer, "Dolby Vision enhancement-layer playback is not supported.\n");
+            MP_VERBOSE(demuxer, "Dolby Vision enhancement-layer mapping found.\n");
         break;
         case MKBETAG('d','v','c','C'):
         case MKBETAG('d','v','v','C'):
