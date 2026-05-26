@@ -868,7 +868,7 @@ local function append_hdr(s, hdr, video_out)
 end
 
 
-local function append_img_params(s, r, ro)
+local function append_img_params(s, r, ro, show_el)
     if not r then
         return
     end
@@ -889,6 +889,9 @@ local function append_img_params(s, r, ro)
     append(s, r["colorlevels"], {prefix="Levels:", nl="", indent=indent})
     if r["chroma-location"] and r["chroma-location"] ~= "unknown" then
         append(s, r["chroma-location"], {prefix="Chroma Loc:", nl="", indent=indent})
+    end
+    if show_el then
+        append(s, r["dovi-el"], {prefix="EL:", nl="", indent=indent})
     end
 
     -- Group these together to save vertical space
@@ -1055,7 +1058,7 @@ local function add_video(s)
     if mp.get_property_native("current-tracks/video/image") == false then
         append_fps(s, "container-fps", "estimated-vf-fps")
     end
-    append_img_params(s, r, ro)
+    append_img_params(s, r, ro, true)
     append_hdr(s, ro)
     append_property(s, "video-bitrate", {prefix="Bitrate:"})
     append_filters(s, "vf", "Filters:")

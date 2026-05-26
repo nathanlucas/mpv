@@ -874,6 +874,8 @@ bool mp_image_params_equal(const struct mp_image_params *p1,
            p1->force_window == p2->force_window &&
            pl_color_space_equal(&p1->color, &p2->color) &&
            pl_color_repr_equal(&p1->repr, &p2->repr) &&
+           p1->dovi_profile == p2->dovi_profile &&
+           p1->dovi_el == p2->dovi_el &&
            p1->light == p2->light &&
            p1->chroma_location == p2->chroma_location &&
            p1->vflip == p2->vflip &&
@@ -889,6 +891,7 @@ bool mp_image_params_static_equal(const struct mp_image_params *p1,
     struct mp_image_params a = *p1;
     struct mp_image_params b = *p2;
     a.repr.dovi = b.repr.dovi = NULL;
+    a.dovi_el = b.dovi_el = MP_DOVI_EL_NO;
     a.color.hdr = b.color.hdr = (struct pl_hdr_metadata){0};
     return mp_image_params_equal(&a, &b);
 }
@@ -898,6 +901,7 @@ void mp_image_params_update_dynamic(struct mp_image_params *dst,
                                     bool has_peak_detect_values)
 {
     dst->repr.dovi = src->repr.dovi;
+    dst->dovi_el = src->dovi_el;
     // Don't overwrite peak-detected HDR metadata if available.
     float max_pq_y = dst->color.hdr.max_pq_y;
     float avg_pq_y = dst->color.hdr.avg_pq_y;
@@ -921,6 +925,25 @@ void mp_image_params_restore_dovi_mapping(struct mp_image_params *params)
         params->color.hdr = (struct pl_hdr_metadata){0};
     if (params->transfer_orig != PL_COLOR_TRC_PQ)
         params->color.hdr.max_pq_y = params->color.hdr.avg_pq_y = 0;
+}
+
+bool mp_image_dovi_requires_el(const struct mp_image *img)
+{
+    const struct pl_dovi_metadata *dovi = img->params.repr.dovi;
+    return img->params.dovi_profile == 7 && dovi && dovi->nlq_active;
+}
+
+void mp_image_update_dovi_el(struct mp_image *img)
+{
+    img->params.dovi_el = MP_DOVI_EL_NO;
+
+    const struct pl_dovi_metadata *dovi = img->params.repr.dovi;
+    if (img->params.dovi_profile != 7 || !dovi)
+        return;
+
+    img->params.dovi_el = dovi->nlq_active && img->enhancement_layer
+                        ? MP_DOVI_EL_FEL
+                        : dovi->nlq_active ? MP_DOVI_EL_NO : MP_DOVI_EL_MEL;
 }
 
 // Set most image parameters, but not image format or size.

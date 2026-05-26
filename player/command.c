@@ -2487,6 +2487,16 @@ static const char *get_aspect_ratio_name(double ratio)
 #undef RATIO_CASE
 }
 
+static const char *dovi_el_name(enum mp_dovi_el el)
+{
+    switch (el) {
+    case MP_DOVI_EL_MEL: return "MEL";
+    case MP_DOVI_EL_FEL: return "FEL";
+    case MP_DOVI_EL_NO:
+    default:             return "no";
+    }
+}
+
 static int property_imgparams(const struct mp_image_params *p, int action, void *arg)
 {
     if (!p->imgfmt && !p->imgfmt_name)
@@ -2552,6 +2562,7 @@ static int property_imgparams(const struct mp_image_params *p, int action, void 
             SUB_PROP_STR(m_opt_choice_str(mp_csp_light_names, p->light))},
         {"chroma-location",
             SUB_PROP_STR(m_opt_choice_str(pl_chroma_names, p->chroma_location))},
+        {"dovi-el", SUB_PROP_STR(dovi_el_name(p->dovi_el))},
         {"stereo-in",
             SUB_PROP_STR(m_opt_choice_str(mp_stereo3d_names, p->stereo3d))},
         {"rotate",          SUB_PROP_INT(p->rotate)},

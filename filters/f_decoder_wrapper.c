@@ -683,6 +683,8 @@ static void fix_image_params(struct priv *p,
     if (m.chroma_location == PL_CHROMA_UNKNOWN)
         m.chroma_location = c->chroma_location;
 
+    m.dovi_profile = c->dovi ? c->dv_profile : 0;
+
     // Guess missing colorspace fields from metadata. This guarantees all
     // fields are at least set to legal values afterwards.
     mp_image_params_guess_csp(&m);

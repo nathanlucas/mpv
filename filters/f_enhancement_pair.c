@@ -152,6 +152,7 @@ static void pair_process(struct mp_filter *f)
             take_head(&p->bl_pending, &p->num_bl_pending);
             inherit_dovi_from_el(bl, el);
             bl->enhancement_layer = el;
+            mp_image_update_dovi_el(bl);
             mp_pin_in_write(out, MAKE_FRAME(MP_FRAME_VIDEO, bl));
             continue;
         }
@@ -166,6 +167,7 @@ static void pair_process(struct mp_filter *f)
 
         take_head(&p->bl_pending, &p->num_bl_pending);
         bl->enhancement_layer = NULL;
+        mp_image_update_dovi_el(bl);
         mp_pin_in_write(out, MAKE_FRAME(MP_FRAME_VIDEO, bl));
     }
 }

@@ -38,6 +38,12 @@
 #define MP_IMGFIELD_REPEAT_FIRST 0x04
 #define MP_IMGFIELD_INTERLACED 0x20
 
+enum mp_dovi_el {
+    MP_DOVI_EL_NO = 0,
+    MP_DOVI_EL_MEL,
+    MP_DOVI_EL_FEL,
+};
+
 // Describes image parameters that usually stay constant.
 // New fields can be added in the future. Code changing the parameters should
 // usually copy the whole struct, so that fields added later will be preserved.
@@ -54,6 +60,8 @@ struct mp_image_params {
     enum pl_color_primaries primaries_orig;
     enum pl_color_transfer transfer_orig;
     enum pl_color_system sys_orig;
+    int dovi_profile;
+    enum mp_dovi_el dovi_el;
 
     enum mp_csp_light light;
     enum pl_chroma_location chroma_location;
@@ -191,6 +199,8 @@ void mp_image_params_update_dynamic(struct mp_image_params *dst,
                                     const struct mp_image_params *src,
                                     bool has_peak_detect_values);
 void mp_image_params_restore_dovi_mapping(struct mp_image_params *params);
+bool mp_image_dovi_requires_el(const struct mp_image *img);
+void mp_image_update_dovi_el(struct mp_image *img);
 
 void mp_image_params_get_dsize(const struct mp_image_params *p,
                                int *d_w, int *d_h);
