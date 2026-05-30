@@ -74,14 +74,13 @@ static int write_packet(void *p, const uint8_t *buf, int buf_size)
     return buf_size;
 }
 
-// (called on both filter destruction _and_ if lavf fails to init)
-static void ad_spdif_destroy(struct mp_filter *da)
+static void close_spdif_muxer(struct mp_filter *da, bool write_trailer)
 {
     struct spdifContext *spdif_ctx = da->priv;
     AVFormatContext     *lavf_ctx  = spdif_ctx->lavf_ctx;
 
     if (lavf_ctx) {
-        if (spdif_ctx->need_close)
+        if (write_trailer && spdif_ctx->need_close)
             av_write_trailer(lavf_ctx);
         if (lavf_ctx->pb)
             av_freep(&lavf_ctx->pb->buffer);
@@ -89,7 +88,22 @@ static void ad_spdif_destroy(struct mp_filter *da)
         avformat_free_context(lavf_ctx);
         spdif_ctx->lavf_ctx = NULL;
     }
+    spdif_ctx->need_close = false;
+    TA_FREEP(&spdif_ctx->fmt);
     mp_free_av_packet(&spdif_ctx->avpkt);
+    spdif_ctx->out_buffer_len = 0;
+    spdif_ctx->sstride = 0;
+}
+
+// (called on both filter destruction _and_ if lavf fails to init)
+static void ad_spdif_destroy(struct mp_filter *da)
+{
+    close_spdif_muxer(da, true);
+}
+
+static void ad_spdif_reset(struct mp_filter *da)
+{
+    close_spdif_muxer(da, false);
 }
 
 static void determine_codec_params(struct mp_filter *da, AVPacket *pkt,
@@ -423,6 +437,7 @@ static const struct mp_filter_info ad_spdif_filter = {
     .name = "ad_spdif",
     .priv_size = sizeof(struct spdifContext),
     .process = ad_spdif_process,
+    .reset = ad_spdif_reset,
     .destroy = ad_spdif_destroy,
 };
 
